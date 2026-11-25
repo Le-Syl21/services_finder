@@ -276,16 +276,23 @@ pub fn run() -> i32 {
         if hwnd.is_null() {
             return 1;
         }
-        // Size the first window from the monitor DPI.
+        // Size the first window from the monitor DPI, within its work area.
         let dpi = GetDpiForWindow(hwnd);
+        let mut mi: MONITORINFO = std::mem::zeroed();
+        mi.cbSize = size_of::<MONITORINFO>() as u32;
+        GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &mut mi);
+        let wa = mi.rcWork;
+        let (ww, wh) = (wa.right - wa.left, wa.bottom - wa.top);
+        let w = scale(1200, dpi).min(ww * 9 / 10);
+        let h = scale(720, dpi).min(wh * 9 / 10);
         SetWindowPos(
             hwnd,
             null_mut(),
-            0,
-            0,
-            scale(1200, dpi),
-            scale(720, dpi),
-            SWP_NOMOVE | SWP_NOZORDER,
+            wa.left + (ww - w) / 2,
+            wa.top + (wh - h) / 2,
+            w,
+            h,
+            SWP_NOZORDER,
         );
         ShowWindow(hwnd, SW_SHOWNORMAL);
 
@@ -1037,7 +1044,7 @@ fn context_menu(lp: LPARAM) {
             sub,
             IDM_DELAYED,
             s.automatic_delayed,
-            configurable,
+            configurable && sv.group.is_empty(),
             config_shield,
         );
         add(sub, IDM_MANUAL, s.manual, configurable, config_shield);

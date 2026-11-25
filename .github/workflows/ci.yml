@@ -1,0 +1,105 @@
+# Release: blocking checks, build, Authenticode signing (Certum, via ssign) and
+# the GitHub release. Runs on version tags only.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Version matches the tag
+        run: |
+          $v = (Select-String -Path Cargo.toml -Pattern '^version = "(.+)"').Matches[0].Groups[1].Value
+          if ("v$v" -ne "${{ github.ref_name }}") { throw "Cargo.toml says $v, tag is ${{ github.ref_name }}" }
+
+      - name: Lint and test
+        run: |
+          cargo fmt --check
+          cargo clippy --release --all-targets -- -D warnings
+          cargo test --release
+
+      - name: Build
+        run: cargo build --release
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: services_finder-windows-x86_64
+          path: target/release/services_finder.exe
+
+  sign-windows:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment: signing
+    steps:
+      - name: Install ssign (prebuilt binary from the latest release)
+        run: |
+          curl -fsSL https://github.com/Le-Syl21/ssign/releases/latest/download/ssign-linux-x86_64.tar.gz | tar xz
+          sudo install -m755 ssign /usr/local/bin/ssign
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: services_finder-windows-x86_64
+          path: dl
+
+      - name: Sign with ssign (via Certum)
+        env:
+          CERTUM_EMAIL: ${{ secrets.CERTUM_EMAIL }}
+          CERTUM_OTP: ${{ secrets.CERTUM_OTP }}
+        run: |
+          ssign --verbose -n "Services Finder" -u "https://github.com/${{ github.repository }}" dl/services_finder.exe
+          sudo apt-get update -qq && sudo apt-get install -y osslsigncode
+          # Check the facts, not the presence of a sentence: "Calculated message
+          # digest" also appears when the digest does NOT match.
+          out=$(osslsigncode verify dl/services_finder.exe 2>&1) || true
+          echo "$out"
+          if echo "$out" | grep -q "MISMATCH"; then
+            echo "::error::invalid Authenticode digest"; exit 1
+          fi
+          if echo "$out" | grep -q "Timestamp is not available"; then
+            echo "::error::signature is not timestamped"; exit 1
+          fi
+          if ! echo "$out" | grep -q "Signature verification: ok"; then
+            echo "::error::signature verification failed"; exit 1
+          fi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: services_finder-signed
+          path: dl/services_finder.exe
+
+  release:
+    needs: sign-windows
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: CHANGELOG.md
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: services_finder-signed
+          path: dl
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          awk -v v="$v" '$0 ~ "^## "v" " {on=1; next} /^## / && on {exit} on' CHANGELOG.md > notes.md
+          test -s notes.md || { echo "::error::no CHANGELOG section for $v"; exit 1; }
+          gh release create "$GITHUB_REF_NAME" -R "${{ github.repository }}" \
+            --title "Services Finder $v" --notes-file notes.md dl/services_finder.exe
+          len=$(gh release view "$GITHUB_REF_NAME" -R "${{ github.repository }}" --json body -q '.body | length')
+          echo "release body: $len characters"
+          test "$len" -gt 20

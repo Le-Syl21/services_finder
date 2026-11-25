@@ -5,8 +5,8 @@ use std::ptr::{null, null_mut};
 use std::time::{Duration, Instant};
 
 use windows_sys::Win32::Foundation::{
-    ERROR_ACCESS_DENIED, ERROR_INSUFFICIENT_BUFFER, ERROR_MORE_DATA, ERROR_SERVICE_NOT_ACTIVE,
-    ERROR_TIMEOUT, GetLastError,
+    ERROR_ACCESS_DENIED, ERROR_INSUFFICIENT_BUFFER, ERROR_INVALID_PARAMETER, ERROR_MORE_DATA,
+    ERROR_SERVICE_NOT_ACTIVE, ERROR_TIMEOUT, GetLastError,
 };
 use windows_sys::Win32::System::Services::*;
 
@@ -57,6 +57,27 @@ pub struct Service {
     pub can_control: bool,
     /// The current token may change its configuration without elevation.
     pub can_config: bool,
+    /// Load ordering group; Windows refuses delayed auto-start for members.
+    pub group: String,
+}
+
+impl Service {
+    fn empty() -> Service {
+        Service {
+            name: String::new(),
+            display: String::new(),
+            description: String::new(),
+            path: String::new(),
+            account: String::new(),
+            state: 0,
+            pid: 0,
+            start: StartType::Unknown,
+            protected: false,
+            can_control: false,
+            can_config: false,
+            group: String::new(),
+        }
+    }
 }
 
 /// What the user asked to do with a service.
@@ -236,6 +257,7 @@ pub fn enumerate() -> Result<Vec<Service>, u32> {
             protected: false,
             can_control: open_service(&scm, &w, SERVICE_START | SERVICE_STOP).is_ok(),
             can_config: open_service(&scm, &w, SERVICE_CHANGE_CONFIG).is_ok(),
+            group: String::new(),
         };
         if let Ok(h) = open_service(&scm, &w, SERVICE_QUERY_CONFIG) {
             read_config(&h, &mut s);
@@ -256,6 +278,7 @@ fn read_config(h: &Handle, s: &mut Service) {
         let c = unsafe { &*(buf.as_ptr() as *const QUERY_SERVICE_CONFIGW) };
         s.path = from_wide_ptr(c.lpBinaryPathName);
         s.account = from_wide_ptr(c.lpServiceStartName);
+        s.group = from_wide_ptr(c.lpLoadOrderGroup);
         s.start = match c.dwStartType {
             SERVICE_BOOT_START => StartType::Boot,
             SERVICE_SYSTEM_START => StartType::System,
@@ -357,7 +380,16 @@ pub fn perform(name: &str, action: Action) -> Result<(), u32> {
                 StartType::Disabled => (SERVICE_DISABLED, false),
                 _ => return Err(ERROR_ACCESS_DENIED),
             };
-            let h = open_service(&scm, &w, SERVICE_CHANGE_CONFIG)?;
+            let h = open_service(&scm, &w, SERVICE_CHANGE_CONFIG | SERVICE_QUERY_CONFIG)?;
+            if delayed {
+                // Delayed auto-start is refused for members of a load ordering
+                // group; check before changing anything.
+                let mut probe = Service::empty();
+                read_config(&h, &mut probe);
+                if !probe.group.is_empty() {
+                    return Err(ERROR_INVALID_PARAMETER);
+                }
+            }
             // SAFETY: SERVICE_NO_CHANGE / null keep every other setting.
             let ok = unsafe {
                 ChangeServiceConfigW(
