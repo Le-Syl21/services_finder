@@ -5,7 +5,7 @@ Services Finder is a small native Windows program that lists the same services a
 filters them as you type, across every column: display name, service name, status,
 startup type, account, description and executable path.
 
-- **One file, about 360 KB.** Native Windows controls, no runtime to install, nothing
+- **One file, about 245 KB.** Native Windows controls, no runtime to install, nothing
   written to the registry.
 - **See what needs elevation.** A shield marks the services your account cannot start
   or stop without administrator rights; a padlock marks protected services that Windows
@@ -51,7 +51,7 @@ chemin). Un bouclier signale les services qu'on ne peut pas démarrer ou arrête
 droits administrateur, un cadenas ceux que Windows protège. Clic droit pour démarrer,
 arrêter, redémarrer, changer le type de démarrage ou ouvrir l'emplacement du fichier :
 l'UAC n'est demandé que pour l'action qui en a besoin. Un seul exe signé d'environ
-360 Ko, sans installation.
+245 Ko, sans installation.
 
 ## License
 
