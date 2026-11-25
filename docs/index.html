@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Services Finder</title>
+<meta name="description" content="Services Finder: the Windows services list with instant search. One 250 KB signed exe, no install.">
+<meta name="google-site-verification" content="TqbXre6qrm9jaoj6tFwRRiI2vuQilAZLm6kUJA-etmo">
+<meta property="og:title" content="Services Finder">
+<meta property="og:description" content="The Windows services list with instant search. One 250 KB signed exe, no install.">
+<meta property="og:image" content="https://le-syl21.github.io/services_finder/img/search.png">
+<link rel="icon" href="img/icon.png">
+<style>
+:root{
+  --bg:#f3f5f9; --paper:#ffffff; --ink:#18212f; --muted:#5a6578;
+  --blue:#1f5fbf; --blue-ink:#ffffff; --shield:#f2b705; --line:#d9dfe9;
+  --code:#e8edf5;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#11161f; --paper:#19202c; --ink:#e7ebf2; --muted:#9aa6b8;
+    --blue:#5b9bff; --blue-ink:#0b1220; --shield:#f5c542; --line:#2b3546;
+    --code:#222b3a;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.6 "Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
+html[lang="en"] [lang="fr"], html[lang="fr"] [lang="en"]{display:none!important}
+.wrap{max-width:980px;margin:0 auto;padding-inline:20px}
+header{padding-block:28px 8px}
+.top{display:flex;align-items:center;gap:14px}
+.top img{width:56px;height:56px}
+.top h1{margin:0;font-size:1.75rem;line-height:1.2;font-weight:650}
+.flags{margin-left:auto;display:flex;gap:8px}
+.flags button{border:2px solid transparent;border-radius:6px;padding:2px;background:none;cursor:pointer;line-height:0}
+.flags button[aria-pressed="true"]{border-color:var(--blue)}
+.flags button:focus-visible{outline:3px solid var(--shield);outline-offset:2px}
+.flags svg{width:34px;height:22px;border-radius:3px;display:block}
+.lead{font-size:1.2rem;max-width:62ch;margin:18px 0 6px;text-wrap:balance}
+.facts{color:var(--muted);margin:0 0 22px}
+.cta{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:30px}
+.btn{display:inline-block;background:var(--blue);color:var(--blue-ink);text-decoration:none;
+  font-weight:600;padding:11px 20px;border-radius:6px}
+.btn:focus-visible,a:focus-visible{outline:3px solid var(--shield);outline-offset:2px}
+.ghost{color:var(--blue);font-weight:600}
+figure{margin:0}
+.shot{background:var(--paper);border:1px solid var(--line);border-radius:8px;overflow:hidden;
+  box-shadow:0 10px 30px rgba(20,40,80,.12)}
+.shot img{display:block;width:100%;height:auto}
+figcaption{color:var(--muted);font-size:.95rem;padding:10px 2px 0}
+.hero{margin-bottom:44px}
+h2{font-size:1.35rem;margin:0 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:28px;margin-bottom:44px}
+.feat{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px 32px;margin:0 0 44px;padding:0;list-style:none}
+.feat li{border-top:2px solid var(--line);padding-top:10px}
+.feat b{display:block;margin-bottom:2px}
+code,kbd{font-family:Consolas,"Cascadia Mono",ui-monospace,monospace;font-size:.9em;
+  background:var(--code);padding:1px 6px;border-radius:4px}
+.box{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px 22px;margin-bottom:44px}
+.box p{margin:.4em 0}
+footer{color:var(--muted);font-size:.9rem;padding-block:10px 40px;border-top:1px solid var(--line)}
+footer a{color:inherit}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="top">
+    <img src="img/icon.png" alt="">
+    <h1>Services Finder</h1>
+    <div class="flags" role="group" aria-label="Language / Langue">
+      <button type="button" data-set="en" aria-label="English" title="English">
+        <svg viewBox="0 0 60 30" aria-hidden="true"><clipPath id="u"><path d="M0 0v30h60V0z"/></clipPath><clipPath id="t"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath><g clip-path="url(#u)"><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" clip-path="url(#t)" stroke="#C8102E" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></g></svg>
+      </button>
+      <button type="button" data-set="fr" aria-label="Français" title="Français">
+        <svg viewBox="0 0 3 2" aria-hidden="true"><path fill="#002395" d="M0 0h1v2H0z"/><path fill="#fff" d="M1 0h1v2H1z"/><path fill="#ED2939" d="M2 0h1v2H2z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <p class="lead" lang="en">The Windows services list, with the search box <code>services.msc</code> never had. Type a few letters, the list filters as you type.</p>
+  <p class="lead" lang="fr">La liste des services Windows, avec la recherche qui manque à <code>services.msc</code>. Tapez quelques lettres, la liste se filtre pendant la frappe.</p>
+  <p class="facts" lang="en">One 250 KB exe · no install · signed · Windows 10, 11 and Server · English and French</p>
+  <p class="facts" lang="fr">Un seul exe de 250 Ko · sans installation · signé · Windows 10, 11 et Server · français et anglais</p>
+
+  <div class="cta">
+    <a class="btn" href="https://github.com/Le-Syl21/services_finder/releases/latest/download/services_finder.exe"><span lang="en">Download services_finder.exe</span><span lang="fr">Télécharger services_finder.exe</span></a>
+    <a class="ghost" href="https://github.com/Le-Syl21/services_finder"><span lang="en">Source code on GitHub</span><span lang="fr">Code source sur GitHub</span></a>
+  </div>
+</header>
+
+<main>
+  <figure class="hero">
+    <div class="shot"><img src="img/search.png" width="912" height="642" alt="Services Finder filtered on “print”: 9 of 259 services"></div>
+    <figcaption lang="en">“print” finds the Print Spooler, but also services whose description mentions printing: 9 of 259.</figcaption>
+    <figcaption lang="fr">« print » trouve le spouleur d'impression, mais aussi les services dont la description parle d'impression : 9 sur 259.</figcaption>
+  </figure>
+
+  <h2 lang="en">What it does</h2>
+  <h2 lang="fr">Ce qu'il fait</h2>
+  <ul class="feat" lang="en">
+    <li><b>Search everything</b>Name, service name, description, path, account, status and startup type. Several words must all match; <code>-word</code> excludes.</li>
+    <li><b>See what needs admin</b>A shield marks the services you can't start or stop without administrator rights; a padlock marks the ones Windows protects from everyone.</li>
+    <li><b>Act without restarting it</b>Right-click to start, stop, restart or change the startup type. When an action needs admin, Windows asks for that one action only.</li>
+    <li><b>Keyboard first</b><kbd>Ctrl</kbd>+<kbd>F</kbd> to search, <kbd>↓</kbd> into the list, <kbd>Esc</kbd> clears, <kbd>F5</kbd> refreshes. Click a column to sort.</li>
+  </ul>
+  <ul class="feat" lang="fr">
+    <li><b>Cherche partout</b>Nom, nom du service, description, chemin, compte, état et type de démarrage. Plusieurs mots doivent tous correspondre ; <code>-mot</code> exclut.</li>
+    <li><b>Montre ce qui demande l'admin</b>Un bouclier signale les services qu'on ne peut pas démarrer ou arrêter sans droits administrateur ; un cadenas, ceux que Windows protège contre tout le monde.</li>
+    <li><b>Agit sans relancer l'appli</b>Clic droit pour démarrer, arrêter, redémarrer ou changer le type de démarrage. Si l'action demande l'admin, Windows le demande pour cette action seulement.</li>
+    <li><b>Au clavier</b><kbd>Ctrl</kbd>+<kbd>F</kbd> pour chercher, <kbd>↓</kbd> pour entrer dans la liste, <kbd>Échap</kbd> efface, <kbd>F5</kbd> actualise. Clic sur une colonne pour trier.</li>
+  </ul>
+
+  <div class="grid">
+    <figure>
+      <div class="shot"><img src="img/menu.png" width="912" height="642" loading="lazy" alt="Right-click menu on Print Spooler, with shields on Stop and Restart"></div>
+      <figcaption lang="en">As a standard user: the shield on Stop and Restart says Windows will ask for admin rights.</figcaption>
+      <figcaption lang="fr">En utilisateur standard : le bouclier sur Arrêter et Redémarrer annonce la demande de droits administrateur.</figcaption>
+    </figure>
+    <figure>
+      <div class="shot"><img src="img/shields.png" width="912" height="642" loading="lazy" alt="Search for “defend”: Defender services with padlocks, firewall with a shield"></div>
+      <figcaption lang="en">“defend”: the Defender services carry a padlock (protected), the firewall a shield (admin only).</figcaption>
+      <figcaption lang="fr">« defend » : les services Defender portent un cadenas (protégés), le pare-feu un bouclier (admin seulement).</figcaption>
+    </figure>
+  </div>
+
+  <div class="box" lang="en">
+    <h2>Good to know</h2>
+    <p>It runs with your normal rights; the <em>Run as administrator</em> button reopens it elevated if you'd rather confirm once.</p>
+    <p>Windows refuses <em>Automatic (delayed start)</em> for services in a load-order group, such as the Print Spooler; the option is greyed out for them.</p>
+    <p>For scripts: <code>services_finder --list</code> prints every service as tab-separated text.</p>
+  </div>
+  <div class="box" lang="fr">
+    <h2>Bon à savoir</h2>
+    <p>Il tourne avec vos droits normaux ; le bouton <em>Exécuter en tant qu'administrateur</em> le relance élevé si vous préférez valider une seule fois.</p>
+    <p>Windows refuse <em>Automatique (début différé)</em> pour les services d'un groupe de chargement, comme le spouleur d'impression ; l'option est grisée pour eux.</p>
+    <p>Pour les scripts : <code>services_finder --list</code> affiche tous les services en texte séparé par des tabulations.</p>
+  </div>
+</main>
+
+<footer>
+  <span lang="en">MIT licence · made by</span><span lang="fr">Licence MIT · par</span>
+  <a href="https://github.com/Le-Syl21">Le-Syl21</a>
+</footer>
+</div>
+<script>
+(function(){
+  var root=document.documentElement, btns=document.querySelectorAll('.flags button');
+  function set(l){
+    root.lang=l;
+    btns.forEach(function(b){b.setAttribute('aria-pressed', b.dataset.set===l?'true':'false')});
+    try{localStorage.setItem('lang',l)}catch(e){}
+  }
+  var q=new URLSearchParams(location.search).get('lang'), s=null;
+  try{s=localStorage.getItem('lang')}catch(e){}
+  set(q==='fr'||q==='en'?q:(s||((navigator.language||'').slice(0,2)==='fr'?'fr':'en')));
+  btns.forEach(function(b){b.addEventListener('click',function(){set(b.dataset.set)})});
+})();
+</script>
+</body>
+</html>
