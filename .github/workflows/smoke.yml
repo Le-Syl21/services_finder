@@ -1,0 +1,106 @@
+# Manual check on a real Windows machine: lint, tests, the access probes as an
+# administrator and as a standard user, and screenshots of the window.
+name: smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Lint and test
+        run: |
+          cargo fmt --check
+          cargo clippy --release --all-targets -- -D warnings
+          cargo test --release
+
+      - name: Build
+        run: |
+          cargo build --release
+          New-Item -ItemType Directory C:\sf | Out-Null
+          Copy-Item target\release\services_finder.exe C:\sf\
+          (Get-Item C:\sf\services_finder.exe).Length
+
+      - name: Create a standard user
+        run: |
+          $pw = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 20 | ForEach-Object { [char]$_ }) + '!a1'
+          $sec = ConvertTo-SecureString $pw -AsPlainText -Force
+          New-LocalUser sftest -Password $sec -PasswordNeverExpires | Out-Null
+          Add-LocalGroupMember -Group Users -Member sftest
+          "SFTEST_PW=$pw" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          icacls C:\sf /grant "sftest:(OI)(CI)M" | Out-Null
+
+      - name: List as administrator and as a standard user
+        run: |
+          Start-Process C:\sf\services_finder.exe -ArgumentList '--list' -Wait -NoNewWindow -RedirectStandardOutput C:\sf\admin.tsv
+          $cred = New-Object PSCredential('sftest', (ConvertTo-SecureString $env:SFTEST_PW -AsPlainText -Force))
+          Start-Process C:\sf\services_finder.exe -ArgumentList '--list' -Credential $cred -Wait -WorkingDirectory C:\sf -RedirectStandardOutput C:\sf\user.tsv
+          foreach ($f in 'admin', 'user') {
+            $rows = Get-Content "C:\sf\$f.tsv" | Select-Object -Skip 2 | ConvertFrom-Csv -Delimiter "`t" -Header name,display,state,start,can_control,can_config,protected,account,path
+            $head = Get-Content "C:\sf\$f.tsv" -TotalCount 1
+            "$f $head services=$($rows.Count) control=$(($rows | ? can_control -eq 'true').Count) config=$(($rows | ? can_config -eq 'true').Count) protected=$(($rows | ? protected -eq 'true').Count)"
+          }
+          "--- standard user can control without elevation:"
+          Get-Content C:\sf\user.tsv | Select-Object -Skip 2 | ConvertFrom-Csv -Delimiter "`t" -Header name,display,state,start,can_control,can_config,protected,account,path | ? can_control -eq 'true' | ForEach-Object { "  $($_.name)  ($($_.display))" }
+          "--- protected:"
+          Get-Content C:\sf\admin.tsv | Select-Object -Skip 2 | ConvertFrom-Csv -Delimiter "`t" -Header name,display,state,start,can_control,can_config,protected,account,path | ? protected -eq 'true' | ForEach-Object { "  $($_.name)" }
+
+      - name: Elevated helper round trip
+        run: |
+          $p = Start-Process C:\sf\services_finder.exe -ArgumentList '--do','stop','Spooler' -Wait -PassThru
+          "stop -> $($p.ExitCode) state=$((Get-Service Spooler).Status)"
+          $p = Start-Process C:\sf\services_finder.exe -ArgumentList '--do','start','Spooler' -Wait -PassThru
+          "start -> $($p.ExitCode) state=$((Get-Service Spooler).Status)"
+          $p = Start-Process C:\sf\services_finder.exe -ArgumentList '--do','delayed','Spooler' -Wait -PassThru
+          "delayed -> $($p.ExitCode) $((sc.exe qc Spooler | Select-String START_TYPE))"
+          $p = Start-Process C:\sf\services_finder.exe -ArgumentList '--do','auto','Spooler' -Wait -PassThru
+          "auto -> $($p.ExitCode) $((sc.exe qc Spooler | Select-String START_TYPE))"
+
+      - name: Screenshots
+        run: |
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $wsh = New-Object -ComObject WScript.Shell
+          function Shot($name) {
+            $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+            $bmp.Save("C:\sf\$name.png")
+          }
+          function Keys($k) { [System.Windows.Forms.SendKeys]::SendWait($k); Start-Sleep -Milliseconds 700 }
+
+          $p = Start-Process C:\sf\services_finder.exe -PassThru
+          Start-Sleep 5; $wsh.AppActivate($p.Id) | Out-Null; Start-Sleep 1
+          Shot 'admin-all'
+          Keys 'print'
+          Shot 'admin-search'
+          Keys '{DOWN}'; Keys '+{F10}'
+          Shot 'admin-menu'
+          Keys '{ESC}'; Stop-Process $p
+
+          $cred = New-Object PSCredential('sftest', (ConvertTo-SecureString $env:SFTEST_PW -AsPlainText -Force))
+          $p = Start-Process C:\sf\services_finder.exe -Credential $cred -WorkingDirectory C:\sf -PassThru
+          Start-Sleep 6; $wsh.AppActivate($p.Id) | Out-Null; Start-Sleep 1
+          Shot 'user-all'
+          Keys 'spool'
+          Keys '{DOWN}'; Keys '+{F10}'
+          Shot 'user-menu'
+          Keys '{ESC}'; Keys '{ESC}'
+          Keys 'defend'
+          Shot 'user-protected'
+          Stop-Process $p -ErrorAction SilentlyContinue
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: smoke
+          path: |
+            C:\sf\*.png
+            C:\sf\*.tsv
+            C:\sf\services_finder.exe
